@@ -25,7 +25,7 @@
       padding: 10px;
       border-radius: 8px;
       box-shadow: 0 0 5px rgba(0,0,0,0.3);
-      width: 200px;
+      width: 220px;
     }
     .top-bar input {
       margin-bottom: 5px;
@@ -54,6 +54,7 @@
   <div class="top-bar">
     <input id="me" placeholder="Je suis (ex: alexandra)" />
     <input id="follow" placeholder="Je veux suivre (ex: malo,papy)" />
+    <input type="file" id="photoUpload" accept="image/*" />
     <button onclick="startApp()">Lancer</button>
     <button onclick="copyLink()">📎 Copier mon lien</button>
     <button onclick="stopSharing()">🛑 Arrêter le partage</button>
@@ -63,6 +64,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <script>
@@ -77,6 +79,7 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const storage = firebase.storage();
 
     const map = L.map('map').setView([48.8566, 2.3522], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -85,9 +88,10 @@
 
     const markers = {};
     let watchId = null;
+    const userPhotos = {};
 
     function getAvatarUrl(username) {
-      return `https://ui-avatars.com/api/?name=${username}&background=random&size=64`;
+      return userPhotos[username] || `https://ui-avatars.com/api/?name=${username}&background=random&size=64`;
     }
 
     function updateMarker(username, lat, lng) {
@@ -109,7 +113,7 @@
 
     function addFollowerToList(username) {
       const list = document.getElementById('followerList');
-      if (document.getElementById('follower-' + username)) return; // avoid duplicates
+      if (document.getElementById('follower-' + username)) return;
       const item = document.createElement('div');
       item.className = 'follower-item';
       item.id = 'follower-' + username;
@@ -134,6 +138,16 @@
       list.appendChild(item);
     }
 
+    function uploadPhotoIfExists(username) {
+      const file = document.getElementById('photoUpload').files[0];
+      if (!file) return;
+      const ref = storage.ref('photos/' + username);
+      return ref.put(file).then(() => ref.getDownloadURL()).then(url => {
+        db.ref('users/' + username + '/photo').set(url);
+        userPhotos[username] = url;
+      });
+    }
+
     function startApp() {
       const me = getMe();
       const follow = getFollow();
@@ -142,26 +156,29 @@
       localStorage.setItem('me', me);
       localStorage.setItem('follow', follow.join(','));
 
-      updateMarker(me, 0, 0); // Pré-créer le marqueur pour ajouter au menu
+      updateMarker(me, 0, 0);
 
-      watchId = navigator.geolocation.watchPosition(position => {
-        const { latitude, longitude } = position.coords;
-        db.ref('users/' + me).set({
-          lat: latitude,
-          lng: longitude,
-          timestamp: Date.now()
+      uploadPhotoIfExists(me).finally(() => {
+        watchId = navigator.geolocation.watchPosition(position => {
+          const { latitude, longitude } = position.coords;
+          db.ref('users/' + me).update({
+            lat: latitude,
+            lng: longitude,
+            timestamp: Date.now()
+          });
+          updateMarker(me, latitude, longitude);
+        }, err => alert("Erreur GPS : " + err.message), {
+          enableHighAccuracy: true,
+          maximumAge: 10000,
+          timeout: 10000
         });
-        updateMarker(me, latitude, longitude);
-      }, err => alert("Erreur GPS : " + err.message), {
-        enableHighAccuracy: true,
-        maximumAge: 10000,
-        timeout: 10000
       });
 
       [...follow, me].forEach(user => {
         db.ref('users/' + user).on('value', snapshot => {
           const data = snapshot.val();
           if (data) {
+            if (data.photo) userPhotos[user] = data.photo;
             updateMarker(user, data.lat, data.lng);
           }
         });
