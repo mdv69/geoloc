@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Localise-moi</title>
   <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#007bff">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
     body {
@@ -180,23 +182,21 @@
     }
 
     function stopSharing() {
-  const me = getMe();
-  if (watchId !== null) {
-    navigator.geolocation.clearWatch(watchId);
-    watchId = null;
-  }
+      const me = getMe();
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
 
-  if (markers[me]) {
-    map.removeLayer(markers[me]);
-    delete markers[me];
-  }
+      if (markers[me]) {
+        map.removeLayer(markers[me]);
+        delete markers[me];
+      }
 
-  // Optionnel : supprimer la localisation de Firebase
-  db.ref('users/' + me).remove();
+      db.ref('users/' + me).remove();
 
-  alert("🛑 Partage arrêté et position supprimée.");
-}
-
+      alert("🛑 Partage arrêté et position supprimée.");
+    }
 
     function copyLink() {
       const me = getMe();
@@ -227,6 +227,12 @@
     window.onload = () => {
       prefillFromLocalStorage();
       setTimeout(() => document.querySelector('button[onclick="startApp()"]').click(), 500);
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('service-worker.js').then(() => {
+          console.log("✅ Service Worker enregistré !");
+        });
+      }
     }
   </script>
 </body>
