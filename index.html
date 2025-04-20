@@ -180,11 +180,23 @@
     }
 
     function stopSharing() {
-      if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-        alert("Partage arrêté.");
-      }
-    }
+  const me = getMe();
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+
+  if (markers[me]) {
+    map.removeLayer(markers[me]);
+    delete markers[me];
+  }
+
+  // Optionnel : supprimer la localisation de Firebase
+  db.ref('users/' + me).remove();
+
+  alert("🛑 Partage arrêté et position supprimée.");
+}
+
 
     function copyLink() {
       const me = getMe();
