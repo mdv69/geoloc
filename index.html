@@ -39,6 +39,14 @@
       cursor: pointer;
       padding: 5px;
       border-bottom: 1px solid #ccc;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .follower-item img {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
     }
   </style>
 </head>
@@ -78,8 +86,12 @@
     const markers = {};
     let watchId = null;
 
+    function getAvatarUrl(username) {
+      return `https://ui-avatars.com/api/?name=${username}&background=random&size=64`;
+    }
+
     function updateMarker(username, lat, lng) {
-      const avatarUrl = `https://ui-avatars.com/api/?name=${username}&background=random&size=64`;
+      const avatarUrl = getAvatarUrl(username);
       const icon = L.icon({
         iconUrl: avatarUrl,
         iconSize: [40, 40],
@@ -97,9 +109,21 @@
 
     function addFollowerToList(username) {
       const list = document.getElementById('followerList');
+      if (document.getElementById('follower-' + username)) return; // avoid duplicates
       const item = document.createElement('div');
       item.className = 'follower-item';
-      item.textContent = username;
+      item.id = 'follower-' + username;
+
+      const avatar = document.createElement('img');
+      avatar.src = getAvatarUrl(username);
+      avatar.alt = username;
+
+      const label = document.createElement('span');
+      label.textContent = username;
+
+      item.appendChild(avatar);
+      item.appendChild(label);
+
       item.onclick = () => {
         const marker = markers[username];
         if (marker) {
@@ -118,6 +142,8 @@
       localStorage.setItem('me', me);
       localStorage.setItem('follow', follow.join(','));
 
+      updateMarker(me, 0, 0); // Pré-créer le marqueur pour ajouter au menu
+
       watchId = navigator.geolocation.watchPosition(position => {
         const { latitude, longitude } = position.coords;
         db.ref('users/' + me).set({
@@ -125,13 +151,14 @@
           lng: longitude,
           timestamp: Date.now()
         });
+        updateMarker(me, latitude, longitude);
       }, err => alert("Erreur GPS : " + err.message), {
         enableHighAccuracy: true,
         maximumAge: 10000,
         timeout: 10000
       });
 
-      follow.forEach(user => {
+      [...follow, me].forEach(user => {
         db.ref('users/' + user).on('value', snapshot => {
           const data = snapshot.val();
           if (data) {
