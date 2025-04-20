@@ -194,6 +194,84 @@
           alert("❌ Problème pendant l’upload de la photo.");
         });
     }
+
+    function initLocationTracking(me) {
+      watchId = navigator.geolocation.watchPosition(position => {
+        const { latitude, longitude } = position.coords;
+        db.ref('users/' + me).update({
+          lat: latitude,
+          lng: longitude,
+          timestamp: Date.now()
+        });
+        updateMarker(me, latitude, longitude);
+      }, err => {
+        alert("❌ Erreur GPS : " + err.message);
+      }, {
+        enableHighAccuracy: true,
+        maximumAge: 10000,
+        timeout: 10000
+      });
+    }
+
+    function startApp() {
+      const me = getMe();
+      const follow = getFollow();
+      if (!me) return alert("Tu dois indiquer ton prénom !");
+
+      localStorage.setItem('me', me);
+      localStorage.setItem('follow', follow.join(','));
+
+      addFollowerToList(me);
+      initLocationTracking(me);
+
+      [...follow, me].forEach(user => {
+        db.ref('users/' + user).on('value', snapshot => {
+          const data = snapshot.val();
+          if (data) {
+            if (data.photo) userPhotos[user] = data.photo;
+            updateMarker(user, data.lat, data.lng);
+          }
+        });
+      });
+    }
+
+    function stopSharing() {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        alert("Partage arrêté.");
+      }
+    }
+
+    function copyLink() {
+      const me = getMe();
+      const follow = getFollow();
+      if (!me) return alert("Renseigne ton prénom d'abord !");
+      const link = `${window.location.origin}?me=${me}&follow=${follow.join(',')}`;
+      navigator.clipboard.writeText(link).then(() => {
+        alert("Lien copié dans le presse-papiers ! Envoie-le à tes proches ✉️");
+      });
+    }
+
+    function getMe() {
+      return document.getElementById('me').value.trim().toLowerCase();
+    }
+
+    function getFollow() {
+      const raw = document.getElementById('follow').value.trim().toLowerCase();
+      return raw ? raw.split(',') : [];
+    }
+
+    function prefillFromLocalStorage() {
+      const me = localStorage.getItem('me');
+      const follow = localStorage.getItem('follow');
+      if (me) document.getElementById('me').value = me;
+      if (follow) document.getElementById('follow').value = follow;
+    }
+
+    window.onload = () => {
+      prefillFromLocalStorage();
+      setTimeout(() => document.querySelector('button[onclick="startApp()"]').click(), 500);
+    }
   </script>
 </body>
 </html>
