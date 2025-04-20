@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ma Position</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
+      background: #f0f8ff;
+    }
+    h1 {
+      color: #333;
+    }
+    button {
+      padding: 15px 30px;
+      font-size: 18px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #output {
+      margin-top: 20px;
+      font-size: 20px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <h1>📍 Où suis-je ?</h1>
+  <button onclick="getLocation()">Me géolocaliser</button>
+  <div id="output">Clique sur le bouton pour voir ta position</div>
+
+  <script>
+    function getLocation() {
+      const output = document.getElementById('output');
+
+      if (!navigator.geolocation) {
+        output.textContent = "La géolocalisation n'est pas supportée.";
+        return;
+      }
+
+      output.textContent = "Recherche de ta position...";
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          output.textContent = `Latitude: ${latitude.toFixed(5)}, Longitude: ${longitude.toFixed(5)}`;
+        },
+        (error) => {
+          output.textContent = "Impossible d'obtenir la position : " + error.message;
+        }
+      );
+    }
+  </script>
+</body>
+</html>
