@@ -55,6 +55,7 @@
     <input id="me" placeholder="Je suis (ex: alexandra)" />
     <input id="follow" placeholder="Je veux suivre (ex: malo,papy)" />
     <input type="file" id="photoUpload" accept="image/*" />
+    <button onclick="uploadPhotoManually()">📸 OK - Sauver ma photo</button>
     <button onclick="startApp()">Lancer</button>
     <button onclick="copyLink()">📎 Copier mon lien</button>
     <button onclick="stopSharing()">🛑 Arrêter le partage</button>
@@ -138,20 +139,22 @@
       list.appendChild(item);
     }
 
-    function uploadPhotoIfExists(username) {
+    function uploadPhotoManually() {
+      const me = getMe();
+      if (!me) return alert("Tu dois d'abord entrer ton prénom.");
       const file = document.getElementById('photoUpload').files[0];
-      if (!file) return Promise.resolve();
-      const ref = storage.ref('photos/' + username);
-      return ref.put(file).then(() => ref.getDownloadURL()).then(url => {
-        db.ref('users/' + username + '/photo').set(url);
-        userPhotos[username] = url;
+      if (!file) return alert("Aucune photo sélectionnée.");
+      const ref = storage.ref('photos/' + me);
+      ref.put(file).then(() => ref.getDownloadURL()).then(url => {
+        db.ref('users/' + me + '/photo').set(url);
+        userPhotos[me] = url;
+        alert("📸 Photo enregistrée avec succès !");
       });
     }
 
     function initLocationTracking(me) {
       watchId = navigator.geolocation.watchPosition(position => {
         const { latitude, longitude } = position.coords;
-        console.log("✅ Position reçue :", latitude, longitude);
         db.ref('users/' + me).update({
           lat: latitude,
           lng: longitude,
@@ -160,7 +163,6 @@
         updateMarker(me, latitude, longitude);
       }, err => {
         alert("❌ Erreur GPS : " + err.message);
-        console.warn("Erreur GPS", err);
       }, {
         enableHighAccuracy: true,
         maximumAge: 10000,
@@ -177,14 +179,7 @@
       localStorage.setItem('follow', follow.join(','));
 
       addFollowerToList(me);
-
-      if (document.getElementById('photoUpload').files.length > 0) {
-        uploadPhotoIfExists(me).then(() => {
-          initLocationTracking(me);
-        });
-      } else {
-        initLocationTracking(me);
-      }
+      initLocationTracking(me);
 
       [...follow, me].forEach(user => {
         db.ref('users/' + user).on('value', snapshot => {
