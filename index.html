@@ -162,37 +162,44 @@
     }
 
     function uploadPhotoManually() {
-      const me = getMe();
-      if (!me) return alert("Tu dois d'abord entrer ton prénom.");
-      const file = document.getElementById('photoUpload').files[0];
-      if (!file) return alert("Aucune photo sélectionnée.");
+  const me = getMe();
+  if (!me) return alert("Tu dois d'abord entrer ton prénom.");
+  const file = document.getElementById('photoUpload').files[0];
+  if (!file) return alert("Aucune photo sélectionnée.");
 
-      const ref = storage.ref('photos/' + me);
-      ref.put(file)
-        .then(() => ref.getDownloadURL())
-        .then(url => {
-          db.ref('users/' + me + '/photo').set(url);
-          userPhotos[me] = url;
+  const ref = storage.ref('photos/' + me);
+  ref.put(file)
+    .then(() => ref.getDownloadURL())
+    .then(url => {
+      db.ref('users/' + me + '/photo').set(url);
+      userPhotos[me] = url;
 
-          const imgEl = document.querySelector(`#follower-${me} img`);
-          if (imgEl) imgEl.src = url;
+      // 🔄 Met à jour l'image dans la liste si déjà existante
+      const avatarImg = document.querySelector(`#follower-${me} img`);
+      if (avatarImg) avatarImg.src = url;
 
-          db.ref('users/' + me).once('value').then(snapshot => {
-  const data = snapshot.val();
-  if (data?.lat && data?.lng) {
-    updateMarker(me, data.lat, data.lng);
-  }
-});
-          alert("📸 Photo bien enregistrée et mise à jour !");
-        })
-        .catch(err => {
-          console.error("Erreur d’upload:", err);
-          alert("❌ Problème pendant l’upload de la photo.");
-          document.getElementById('followerList').innerHTML = '';
-          startApp();
+      // 🔄 Supprime et recrée le marqueur avec la nouvelle photo
+      if (markers[me]) {
+        map.removeLayer(markers[me]);
+        delete markers[me];
+      }
 
-        });
-    }
+      // Recharge lat/lng depuis Firebase pour recréer le marqueur
+      db.ref('users/' + me).once('value').then(snapshot => {
+        const data = snapshot.val();
+        if (data?.lat && data?.lng) {
+          updateMarker(me, data.lat, data.lng);
+        }
+      });
+
+      alert(\"📸 Photo bien enregistrée et mise à jour !\");
+    })
+    .catch(err => {
+      console.error(\"Erreur d’upload:\", err);
+      alert(\"❌ Problème pendant l’upload de la photo.\");
+    });
+}
+
     
 
     function initLocationTracking(me) {
