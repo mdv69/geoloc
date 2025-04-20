@@ -140,11 +140,31 @@
 
     function uploadPhotoIfExists(username) {
       const file = document.getElementById('photoUpload').files[0];
-      if (!file) return;
+      if (!file) return Promise.resolve();
       const ref = storage.ref('photos/' + username);
       return ref.put(file).then(() => ref.getDownloadURL()).then(url => {
         db.ref('users/' + username + '/photo').set(url);
         userPhotos[username] = url;
+      });
+    }
+
+    function initLocationTracking(me) {
+      watchId = navigator.geolocation.watchPosition(position => {
+        const { latitude, longitude } = position.coords;
+        console.log("✅ Position reçue :", latitude, longitude);
+        db.ref('users/' + me).update({
+          lat: latitude,
+          lng: longitude,
+          timestamp: Date.now()
+        });
+        updateMarker(me, latitude, longitude);
+      }, err => {
+        alert("❌ Erreur GPS : " + err.message);
+        console.warn("Erreur GPS", err);
+      }, {
+        enableHighAccuracy: true,
+        maximumAge: 10000,
+        timeout: 10000
       });
     }
 
@@ -156,24 +176,15 @@
       localStorage.setItem('me', me);
       localStorage.setItem('follow', follow.join(','));
 
-      addFollowerToList(me); // ajoute juste le nom dans la liste, sans afficher de point sur la map
+      addFollowerToList(me);
 
-
-      uploadPhotoIfExists(me).finally(() => {
-        watchId = navigator.geolocation.watchPosition(position => {
-          const { latitude, longitude } = position.coords;
-          db.ref('users/' + me).update({
-            lat: latitude,
-            lng: longitude,
-            timestamp: Date.now()
-          });
-          updateMarker(me, latitude, longitude);
-        }, err => alert("Erreur GPS : " + err.message), {
-          enableHighAccuracy: true,
-          maximumAge: 10000,
-          timeout: 10000
+      if (document.getElementById('photoUpload').files.length > 0) {
+        uploadPhotoIfExists(me).then(() => {
+          initLocationTracking(me);
         });
-      });
+      } else {
+        initLocationTracking(me);
+      }
 
       [...follow, me].forEach(user => {
         db.ref('users/' + user).on('value', snapshot => {
