@@ -8,9 +8,10 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
     body {
-      font-family: sans-serif;
+      font-family: 'Segoe UI', sans-serif;
       margin: 0;
       padding: 0;
+      background: #f9f9f9;
     }
     #map {
       height: 100vh;
@@ -18,35 +19,56 @@
     }
     .top-bar {
       position: absolute;
-      top: 10px;
-      left: 10px;
+      top: 20px;
+      left: 20px;
       z-index: 1000;
       background: white;
-      padding: 10px;
-      border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.3);
-      width: 220px;
+      padding: 15px;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      width: 240px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
-    .top-bar input {
-      margin-bottom: 5px;
-      display: block;
-      width: 100%;
+    .top-bar input, .top-bar button {
+      font-size: 14px;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      outline: none;
+    }
+    .top-bar button {
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      transition: background 0.3s;
+    }
+    .top-bar button:hover {
+      background-color: #0056b3;
     }
     .follower-list {
       margin-top: 10px;
     }
     .follower-item {
       cursor: pointer;
-      padding: 5px;
-      border-bottom: 1px solid #ccc;
+      padding: 6px;
+      border-bottom: 1px solid #eee;
       display: flex;
       align-items: center;
       gap: 8px;
+      transition: background 0.2s;
+      border-radius: 6px;
+    }
+    .follower-item:hover {
+      background: #f0f0f0;
     }
     .follower-item img {
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
+      object-fit: cover;
     }
   </style>
 </head>
@@ -140,112 +162,37 @@
     }
 
     function uploadPhotoManually() {
-  const me = getMe();
-  if (!me) return alert("Tu dois d'abord entrer ton prénom.");
-  const file = document.getElementById('photoUpload').files[0];
-  if (!file) return alert("Aucune photo sélectionnée.");
-  const ref = storage.ref('photos/' + me);
-
-  ref.put(file).then(() => ref.getDownloadURL()).then(url => {
-    db.ref('users/' + me + '/photo').set(url);
-    userPhotos[me] = url;
-
-    // 🔄 Met à jour l'image dans la liste
-    const avatarImg = document.querySelector(`#follower-${me} img`);
-    if (avatarImg) avatarImg.src = url;
-
-    // 🔄 Met à jour l’icône sur la carte
-    if (markers[me]) {
-      const icon = L.icon({
-        iconUrl: url,
-        iconSize: [40, 40],
-        iconAnchor: [20, 40],
-        popupAnchor: [0, -40]
-      });
-      markers[me].setIcon(icon);
-    }
-
-    alert("📸 Photo enregistrée et affichée !");
-  });
-}
-
-
-    function initLocationTracking(me) {
-      watchId = navigator.geolocation.watchPosition(position => {
-        const { latitude, longitude } = position.coords;
-        db.ref('users/' + me).update({
-          lat: latitude,
-          lng: longitude,
-          timestamp: Date.now()
-        });
-        updateMarker(me, latitude, longitude);
-      }, err => {
-        alert("❌ Erreur GPS : " + err.message);
-      }, {
-        enableHighAccuracy: true,
-        maximumAge: 10000,
-        timeout: 10000
-      });
-    }
-
-    function startApp() {
       const me = getMe();
-      const follow = getFollow();
-      if (!me) return alert("Tu dois indiquer ton prénom !");
+      if (!me) return alert("Tu dois d'abord entrer ton prénom.");
+      const file = document.getElementById('photoUpload').files[0];
+      if (!file) return alert("Aucune photo sélectionnée.");
 
-      localStorage.setItem('me', me);
-      localStorage.setItem('follow', follow.join(','));
+      const ref = storage.ref('photos/' + me);
+      ref.put(file)
+        .then(() => ref.getDownloadURL())
+        .then(url => {
+          db.ref('users/' + me + '/photo').set(url);
+          userPhotos[me] = url;
 
-      addFollowerToList(me);
-      initLocationTracking(me);
+          const imgEl = document.querySelector(`#follower-${me} img`);
+          if (imgEl) imgEl.src = url;
 
-      [...follow, me].forEach(user => {
-        db.ref('users/' + user).on('value', snapshot => {
-          const data = snapshot.val();
-          if (data) {
-            if (data.photo) userPhotos[user] = data.photo;
-            updateMarker(user, data.lat, data.lng);
+          if (markers[me]) {
+            const icon = L.icon({
+              iconUrl: url,
+              iconSize: [40, 40],
+              iconAnchor: [20, 40],
+              popupAnchor: [0, -40]
+            });
+            markers[me].setIcon(icon);
           }
+
+          alert("📸 Photo bien enregistrée et mise à jour !");
+        })
+        .catch(err => {
+          console.error("Erreur d’upload:", err);
+          alert("❌ Problème pendant l’upload de la photo.");
         });
-      });
-    }
-
-    function stopSharing() {
-      if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-        alert("Partage arrêté.");
-      }
-    }
-
-    function copyLink() {
-      const me = getMe();
-      const follow = getFollow();
-      if (!me) return alert("Renseigne ton prénom d'abord !");
-      const link = `${window.location.origin}?me=${me}&follow=${follow.join(',')}`;
-      navigator.clipboard.writeText(link).then(() => {
-        alert("Lien copié dans le presse-papiers ! Envoie-le à tes proches ✉️");
-      });
-    }
-
-    function getMe() {
-      return document.getElementById('me').value.trim().toLowerCase();
-    }
-
-    function getFollow() {
-      const raw = document.getElementById('follow').value.trim().toLowerCase();
-      return raw ? raw.split(',') : [];
-    }
-
-    function prefillFromLocalStorage() {
-      const me = localStorage.getItem('me');
-      const follow = localStorage.getItem('follow');
-      if (me) document.getElementById('me').value = me;
-      if (follow) document.getElementById('follow').value = follow;
-    }
-
-    window.onload = () => {
-      prefillFromLocalStorage();
-      setTimeout(() => document.querySelector('button[onclick="startApp()"]').click(), 500);
     }
   </script>
 </body>
