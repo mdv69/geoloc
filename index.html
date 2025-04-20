@@ -177,20 +177,13 @@
           const imgEl = document.querySelector(`#follower-${me} img`);
           if (imgEl) imgEl.src = url;
 
-          if (markers[me]) {
-            const icon = L.icon({
-              iconUrl: url,
-              iconSize: [40, 40],
-              iconAnchor: [20, 40],
-              popupAnchor: [0, -40]
-            });
-            markers[me].setIcon(icon);
-          }
+          db.ref('users/' + me).once('value').then(snapshot => {
+  const data = snapshot.val();
+  if (data?.lat && data?.lng) {
+    updateMarker(me, data.lat, data.lng);
+  }
+});
 
-            const latlng = markers[me]?.getLatLng();
-        if (latlng) {
-          updateMarker(me, latlng.lat, latlng.lng);
-        }
 
 
           alert("📸 Photo bien enregistrée et mise à jour !");
