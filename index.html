@@ -183,16 +183,17 @@
     updateMarker(me, data.lat, data.lng);
   }
 });
-
-
-
           alert("📸 Photo bien enregistrée et mise à jour !");
         })
         .catch(err => {
           console.error("Erreur d’upload:", err);
           alert("❌ Problème pendant l’upload de la photo.");
+          document.getElementById('followerList').innerHTML = '';
+          startApp();
+
         });
     }
+    
 
     function initLocationTracking(me) {
       watchId = navigator.geolocation.watchPosition(position => {
