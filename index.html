@@ -25,11 +25,20 @@
       padding: 10px;
       border-radius: 8px;
       box-shadow: 0 0 5px rgba(0,0,0,0.3);
+      width: 200px;
     }
     .top-bar input {
       margin-bottom: 5px;
       display: block;
       width: 100%;
+    }
+    .follower-list {
+      margin-top: 10px;
+    }
+    .follower-item {
+      cursor: pointer;
+      padding: 5px;
+      border-bottom: 1px solid #ccc;
     }
   </style>
 </head>
@@ -40,6 +49,7 @@
     <button onclick="startApp()">Lancer</button>
     <button onclick="copyLink()">📎 Copier mon lien</button>
     <button onclick="stopSharing()">🛑 Arrêter le partage</button>
+    <div class="follower-list" id="followerList"></div>
   </div>
   <div id="map"></div>
 
@@ -69,11 +79,35 @@
     let watchId = null;
 
     function updateMarker(username, lat, lng) {
+      const avatarUrl = `https://ui-avatars.com/api/?name=${username}&background=random&size=64`;
+      const icon = L.icon({
+        iconUrl: avatarUrl,
+        iconSize: [40, 40],
+        iconAnchor: [20, 40],
+        popupAnchor: [0, -40]
+      });
+
       if (markers[username]) {
         markers[username].setLatLng([lat, lng]);
       } else {
-        markers[username] = L.marker([lat, lng]).addTo(map).bindPopup(username);
+        markers[username] = L.marker([lat, lng], { icon }).addTo(map).bindPopup(username);
+        addFollowerToList(username);
       }
+    }
+
+    function addFollowerToList(username) {
+      const list = document.getElementById('followerList');
+      const item = document.createElement('div');
+      item.className = 'follower-item';
+      item.textContent = username;
+      item.onclick = () => {
+        const marker = markers[username];
+        if (marker) {
+          map.setView(marker.getLatLng(), 15);
+          marker.openPopup();
+        }
+      };
+      list.appendChild(item);
     }
 
     function startApp() {
