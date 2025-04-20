@@ -64,20 +64,12 @@
     .follower-item:hover {
       background: #f0f0f0;
     }
-    .follower-item img {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      object-fit: cover;
-    }
   </style>
 </head>
 <body>
   <div class="top-bar">
     <input id="me" placeholder="Je suis (ex: alexandra)" />
     <input id="follow" placeholder="Je veux suivre (ex: malo,papy)" />
-    <input type="file" id="photoUpload" accept="image/*" />
-    <button onclick="uploadPhotoManually()">📸 OK - Sauver ma photo</button>
     <button onclick="startApp()">Lancer</button>
     <button onclick="copyLink()">📎 Copier mon lien</button>
     <button onclick="stopSharing()">🛑 Arrêter le partage</button>
@@ -87,7 +79,6 @@
 
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <script>
@@ -102,7 +93,6 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const storage = firebase.storage();
 
     const map = L.map('map').setView([48.8566, 2.3522], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -111,16 +101,10 @@
 
     const markers = {};
     let watchId = null;
-    const userPhotos = {};
-
-    function getAvatarUrl(username) {
-      return userPhotos[username] || `https://ui-avatars.com/api/?name=${username}&background=random&size=64`;
-    }
 
     function updateMarker(username, lat, lng) {
-      const avatarUrl = getAvatarUrl(username);
       const icon = L.icon({
-        iconUrl: avatarUrl,
+        iconUrl: `https://ui-avatars.com/api/?name=${username}&background=random&size=64`,
         iconSize: [40, 40],
         iconAnchor: [20, 40],
         popupAnchor: [0, -40]
@@ -141,14 +125,9 @@
       item.className = 'follower-item';
       item.id = 'follower-' + username;
 
-      const avatar = document.createElement('img');
-      avatar.src = getAvatarUrl(username);
-      avatar.alt = username;
-
       const label = document.createElement('span');
       label.textContent = username;
 
-      item.appendChild(avatar);
       item.appendChild(label);
 
       item.onclick = () => {
@@ -160,47 +139,6 @@
       };
       list.appendChild(item);
     }
-
-    function uploadPhotoManually() {
-  const me = getMe();
-  if (!me) return alert("Tu dois d'abord entrer ton prénom.");
-  const file = document.getElementById('photoUpload').files[0];
-  if (!file) return alert("Aucune photo sélectionnée.");
-
-  const ref = storage.ref('photos/' + me);
-  ref.put(file)
-    .then(() => ref.getDownloadURL())
-    .then(url => {
-      db.ref('users/' + me + '/photo').set(url);
-      userPhotos[me] = url;
-
-      // 🔄 Met à jour l'image dans la liste si déjà existante
-      const avatarImg = document.querySelector(`#follower-${me} img`);
-      if (avatarImg) avatarImg.src = url;
-
-      // 🔄 Supprime et recrée le marqueur avec la nouvelle photo
-      if (markers[me]) {
-        map.removeLayer(markers[me]);
-        delete markers[me];
-      }
-
-      // Recharge lat/lng depuis Firebase pour recréer le marqueur
-      db.ref('users/' + me).once('value').then(snapshot => {
-        const data = snapshot.val();
-        if (data?.lat && data?.lng) {
-          updateMarker(me, data.lat, data.lng);
-        }
-      });
-
-      alert("📸 Photo bien enregistrée et mise à jour !");
-    })
-    .catch(err => {
-      console.error(\"Erreur d’upload:\", err);
-      alert(\"❌ Problème pendant l’upload de la photo.\");
-    });
-}
-
-    
 
     function initLocationTracking(me) {
       watchId = navigator.geolocation.watchPosition(position => {
@@ -235,10 +173,7 @@
         db.ref('users/' + user).on('value', snapshot => {
           const data = snapshot.val();
           if (data) {
-            if (data.photo) userPhotos[user] = data.photo;
-           userPhotos[user] = data.photo || userPhotos[user];
-          updateMarker(user, data.lat, data.lng);
-
+            updateMarker(user, data.lat, data.lng);
           }
         });
       });
