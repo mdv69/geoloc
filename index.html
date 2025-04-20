@@ -228,7 +228,9 @@
           const data = snapshot.val();
           if (data) {
             if (data.photo) userPhotos[user] = data.photo;
-            updateMarker(user, data.lat, data.lng);
+           userPhotos[user] = data.photo || userPhotos[user];
+          updateMarker(user, data.lat, data.lng);
+
           }
         });
       });
