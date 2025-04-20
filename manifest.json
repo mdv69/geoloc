@@ -1,14 +1,20 @@
 {
-  "name": "Ma Position",
-  "short_name": "Position",
-  "start_url": "index.html",
+  "name": "Localise-moi",
+  "short_name": "Localise",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#007bff",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Location_dot_blue.svg/1024px-Location_dot_blue.svg.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ]
