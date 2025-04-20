@@ -140,17 +140,35 @@
     }
 
     function uploadPhotoManually() {
-      const me = getMe();
-      if (!me) return alert("Tu dois d'abord entrer ton prénom.");
-      const file = document.getElementById('photoUpload').files[0];
-      if (!file) return alert("Aucune photo sélectionnée.");
-      const ref = storage.ref('photos/' + me);
-      ref.put(file).then(() => ref.getDownloadURL()).then(url => {
-        db.ref('users/' + me + '/photo').set(url);
-        userPhotos[me] = url;
-        alert("📸 Photo enregistrée avec succès !");
+  const me = getMe();
+  if (!me) return alert("Tu dois d'abord entrer ton prénom.");
+  const file = document.getElementById('photoUpload').files[0];
+  if (!file) return alert("Aucune photo sélectionnée.");
+  const ref = storage.ref('photos/' + me);
+
+  ref.put(file).then(() => ref.getDownloadURL()).then(url => {
+    db.ref('users/' + me + '/photo').set(url);
+    userPhotos[me] = url;
+
+    // 🔄 Met à jour l'image dans la liste
+    const avatarImg = document.querySelector(`#follower-${me} img`);
+    if (avatarImg) avatarImg.src = url;
+
+    // 🔄 Met à jour l’icône sur la carte
+    if (markers[me]) {
+      const icon = L.icon({
+        iconUrl: url,
+        iconSize: [40, 40],
+        iconAnchor: [20, 40],
+        popupAnchor: [0, -40]
       });
+      markers[me].setIcon(icon);
     }
+
+    alert("📸 Photo enregistrée et affichée !");
+  });
+}
+
 
     function initLocationTracking(me) {
       watchId = navigator.geolocation.watchPosition(position => {
