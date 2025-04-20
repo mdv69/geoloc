@@ -187,6 +187,12 @@
             markers[me].setIcon(icon);
           }
 
+            const latlng = markers[me]?.getLatLng();
+        if (latlng) {
+          updateMarker(me, latlng.lat, latlng.lng);
+        }
+
+
           alert("📸 Photo bien enregistrée et mise à jour !");
         })
         .catch(err => {
