@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Partage de Localisation</title>
+  <title>Localise-moi</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
@@ -26,12 +26,20 @@
       border-radius: 8px;
       box-shadow: 0 0 5px rgba(0,0,0,0.3);
     }
+    .top-bar input {
+      margin-bottom: 5px;
+      display: block;
+      width: 100%;
+    }
   </style>
 </head>
 <body>
   <div class="top-bar">
-    <input id="username" placeholder="Ton prénom" />
-    <button onclick="startSharing()">Partager ma position</button>
+    <input id="me" placeholder="Je suis (ex: alexandra)" />
+    <input id="follow" placeholder="Je veux suivre (ex: malo,papy)" />
+    <button onclick="startApp()">Lancer</button>
+    <button onclick="copyLink()">📎 Copier mon lien</button>
+    <button onclick="stopSharing()">🛑 Arrêter le partage</button>
   </div>
   <div id="map"></div>
 
@@ -58,6 +66,7 @@
     }).addTo(map);
 
     const markers = {};
+    let watchId = null;
 
     function updateMarker(username, lat, lng) {
       if (markers[username]) {
@@ -67,25 +76,15 @@
       }
     }
 
-    function listenForUsers() {
-      db.ref('users').on('value', snapshot => {
-        const data = snapshot.val();
-        if (data) {
-          Object.keys(data).forEach(username => {
-            const user = data[username];
-            updateMarker(username, user.lat, user.lng);
-          });
-        }
-      });
-    }
+    function startApp() {
+      const me = getMe();
+      const follow = getFollow();
+      if (!me) return alert("Tu dois indiquer ton prénom !");
 
-    function startSharing() {
-      const username = document.getElementById('username').value.trim().toLowerCase();
-      if (!username) return alert("Entre un prénom valide");
-
-      navigator.geolocation.watchPosition(position => {
+      // Partage en continu
+      watchId = navigator.geolocation.watchPosition(position => {
         const { latitude, longitude } = position.coords;
-        db.ref('users/' + username).set({
+        db.ref('users/' + me).set({
           lat: latitude,
           lng: longitude,
           timestamp: Date.now()
@@ -95,9 +94,53 @@
         maximumAge: 10000,
         timeout: 10000
       });
+
+      // Suivre les autres
+      follow.forEach(user => {
+        db.ref('users/' + user).on('value', snapshot => {
+          const data = snapshot.val();
+          if (data) {
+            updateMarker(user, data.lat, data.lng);
+          }
+        });
+      });
     }
 
-    listenForUsers();
+    function stopSharing() {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        alert("Partage arrêté.");
+      }
+    }
+
+    function copyLink() {
+      const me = getMe();
+      const follow = getFollow();
+      if (!me) return alert("Renseigne ton prénom d'abord !");
+      const link = `${window.location.origin}?me=${me}&follow=${follow.join(',')}`;
+      navigator.clipboard.writeText(link).then(() => {
+        alert("Lien copié dans le presse-papiers ! Envoie-le à tes proches ✉️");
+      });
+    }
+
+    function getMe() {
+      return document.getElementById('me').value.trim().toLowerCase();
+    }
+
+    function getFollow() {
+      const raw = document.getElementById('follow').value.trim().toLowerCase();
+      return raw ? raw.split(',') : [];
+    }
+
+    function prefillFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const me = params.get('me');
+      const follow = params.get('follow');
+      if (me) document.getElementById('me').value = me;
+      if (follow) document.getElementById('follow').value = follow;
+    }
+
+    prefillFromUrl();
   </script>
 </body>
 </html>
