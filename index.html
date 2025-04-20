@@ -81,7 +81,9 @@
       const follow = getFollow();
       if (!me) return alert("Tu dois indiquer ton prénom !");
 
-      // Partage en continu
+      localStorage.setItem('me', me);
+      localStorage.setItem('follow', follow.join(','));
+
       watchId = navigator.geolocation.watchPosition(position => {
         const { latitude, longitude } = position.coords;
         db.ref('users/' + me).set({
@@ -95,7 +97,6 @@
         timeout: 10000
       });
 
-      // Suivre les autres
       follow.forEach(user => {
         db.ref('users/' + user).on('value', snapshot => {
           const data = snapshot.val();
@@ -132,15 +133,17 @@
       return raw ? raw.split(',') : [];
     }
 
-    function prefillFromUrl() {
-      const params = new URLSearchParams(window.location.search);
-      const me = params.get('me');
-      const follow = params.get('follow');
+    function prefillFromLocalStorage() {
+      const me = localStorage.getItem('me');
+      const follow = localStorage.getItem('follow');
       if (me) document.getElementById('me').value = me;
       if (follow) document.getElementById('follow').value = follow;
     }
 
-    prefillFromUrl();
+    window.onload = () => {
+      prefillFromLocalStorage();
+      setTimeout(() => document.querySelector('button[onclick="startApp()"]').click(), 500);
+    }
   </script>
 </body>
 </html>
