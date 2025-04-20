@@ -156,7 +156,8 @@
       localStorage.setItem('me', me);
       localStorage.setItem('follow', follow.join(','));
 
-      updateMarker(me, 0, 0);
+      addFollowerToList(me); // ajoute juste le nom dans la liste, sans afficher de point sur la map
+
 
       uploadPhotoIfExists(me).finally(() => {
         watchId = navigator.geolocation.watchPosition(position => {
