@@ -19,60 +19,64 @@
       height: 100vh;
       width: 100%;
     }
-    .top-bar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 1000;
+    .side-bar-toggle {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 1001;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .side-bar {
+      position: absolute;
+      top: 0;
+      left: -260px;
+      height: 100%;
+      width: 240px;
       background: white;
       padding: 15px;
-      border-radius: 16px 16px 0 0;
-      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+      border-right: 2px solid #eee;
+      box-shadow: 2px 0 12px rgba(0,0,0,0.1);
+      transition: left 0.3s ease-in-out;
+      z-index: 1000;
       display: flex;
       flex-direction: column;
       gap: 8px;
-      transform: translateY(100%);
-      transition: transform 0.3s ease-in-out;
     }
-    .top-bar.active {
-      transform: translateY(0);
+    .side-bar.active {
+      left: 0;
     }
-    .top-bar input, .top-bar button {
+    .side-bar input, .side-bar button {
       font-size: 14px;
       padding: 8px;
       border: 1px solid #ddd;
       border-radius: 8px;
       outline: none;
     }
-    .top-bar button {
+    .side-bar button {
       cursor: pointer;
       background-color: #007bff;
       color: white;
       border: none;
       transition: background 0.3s;
     }
-    .top-bar button:hover {
+    .side-bar button:hover {
       background-color: #0056b3;
-    }
-    .toggle-bar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 40px;
-      background: #007bff;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-top-left-radius: 12px;
-      border-top-right-radius: 12px;
-      cursor: pointer;
-      z-index: 1001;
     }
     .follower-list {
       margin-top: 10px;
+      overflow-y: auto;
+      max-height: 50vh;
     }
     .follower-item {
       cursor: pointer;
@@ -90,8 +94,8 @@
   </style>
 </head>
 <body>
-  <div class="toggle-bar" onclick="togglePanel()">⬆️ Ouvrir le panneau</div>
-  <div class="top-bar" id="panel">
+  <button class="side-bar-toggle" onclick="toggleSidebar()">☰</button>
+  <div class="side-bar" id="sidebar">
     <input id="me" placeholder="Je suis (ex: alexandra)" />
     <input id="follow" placeholder="Je veux suivre (ex: malo,papy)" />
     <button onclick="startApp()">Lancer</button>
@@ -221,18 +225,15 @@
     }
 
     function copyLink() {
-  const me = getMe();
-  const follow = getFollow();
-  if (!me) return alert("Renseigne ton prénom d'abord !");
-
-  const base = `${window.location.origin}${window.location.pathname}`;
-  const link = `${base}?me=${me}&follow=${follow.join(',')}`;
-
-  navigator.clipboard.writeText(link).then(() => {
-    alert("Lien copié dans le presse-papiers ! Envoie-le à tes proches ✉️");
-  });
-}
-
+      const me = getMe();
+      const follow = getFollow();
+      if (!me) return alert("Renseigne ton prénom d'abord !");
+      const base = `${window.location.origin}${window.location.pathname}`;
+      const link = `${base}?me=${me}&follow=${follow.join(',')}`;
+      navigator.clipboard.writeText(link).then(() => {
+        alert("Lien copié dans le presse-papiers ! Envoie-le à tes proches ✉️");
+      });
+    }
 
     function getMe() {
       return document.getElementById('me').value.trim().toLowerCase();
@@ -250,19 +251,17 @@
       if (follow) document.getElementById('follow').value = follow;
     }
 
-    function togglePanel() {
-      const panel = document.getElementById('panel');
-      panel.classList.toggle('active');
-      document.querySelector('.toggle-bar').textContent = panel.classList.contains('active') ? '⬇️ Fermer le panneau' : '⬆️ Ouvrir le panneau';
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('active');
     }
 
     window.onload = () => {
-      // ✅ Lire les paramètres d’URL ?me=...&follow=...
       const params = new URLSearchParams(window.location.search);
       const meParam = params.get('me');
       const followParam = params.get('follow');
       if (meParam) document.getElementById('me').value = meParam;
       if (followParam) document.getElementById('follow').value = followParam;
+
       prefillFromLocalStorage();
       setTimeout(() => document.querySelector('button[onclick="startApp()"]').click(), 500);
 
