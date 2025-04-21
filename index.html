@@ -6,7 +6,7 @@
   <title>Localise-moi</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#007bff">
-  <link rel="apple-touch-icon" href="icon-192-v2.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
     body {
@@ -14,69 +14,63 @@
       margin: 0;
       padding: 0;
       background: #f9f9f9;
+      overflow: hidden;
     }
     #map {
       height: 100vh;
       width: 100%;
     }
-    .side-bar-toggle {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      z-index: 1001;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      font-size: 24px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    .side-bar {
-      position: absolute;
-      top: 0;
-      left: -260px;
-      height: 100%;
-      width: 240px;
+    .bottom-sheet {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      max-height: 90vh;
       background: white;
-      padding: 15px;
-      border-right: 2px solid #eee;
-      box-shadow: 2px 0 12px rgba(0,0,0,0.1);
-      transition: left 0.3s ease-in-out;
-      z-index: 1000;
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.2);
+      transform: translateY(70%);
+      transition: transform 0.3s ease-in-out;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      z-index: 1001;
     }
-    .side-bar.active {
-      left: 0;
+    .bottom-sheet.expanded {
+      transform: translateY(0);
     }
-    .side-bar input, .side-bar button {
+    .drag-handle {
+      width: 50px;
+      height: 6px;
+      background: #ccc;
+      border-radius: 3px;
+      margin: 10px auto;
+      cursor: grab;
+    }
+    .bottom-content {
+      padding: 0 15px 15px;
+      overflow-y: auto;
+    }
+    .bottom-content input, .bottom-content button {
       font-size: 14px;
       padding: 8px;
       border: 1px solid #ddd;
       border-radius: 8px;
       outline: none;
+      margin-bottom: 10px;
+      width: 100%;
     }
-    .side-bar button {
-      cursor: pointer;
+    .bottom-content button {
       background-color: #007bff;
       color: white;
       border: none;
-      transition: background 0.3s;
     }
-    .side-bar button:hover {
+    .bottom-content button:hover {
       background-color: #0056b3;
     }
     .follower-list {
-      margin-top: 10px;
+      max-height: 200px;
       overflow-y: auto;
-      max-height: 50vh;
     }
     .follower-item {
       cursor: pointer;
@@ -94,16 +88,19 @@
   </style>
 </head>
 <body>
-  <button class="side-bar-toggle" onclick="toggleSidebar()">☰</button>
-  <div class="side-bar" id="sidebar">
-    <input id="me" placeholder="Je suis (ex: alexandra)" />
-    <input id="follow" placeholder="Je veux suivre (ex: malo,papy)" />
-    <button onclick="startApp()">Lancer</button>
-    <button onclick="copyLink()">📎 Copier mon lien</button>
-    <button onclick="stopSharing()">🛑 Arrêter le partage</button>
-    <div class="follower-list" id="followerList"></div>
-  </div>
   <div id="map"></div>
+
+  <div class="bottom-sheet" id="bottomSheet">
+    <div class="drag-handle" id="dragHandle"></div>
+    <div class="bottom-content">
+      <input id="me" placeholder="Je suis (ex: alexandra)" />
+      <input id="follow" placeholder="Je veux suivre (ex: malo,papy)" />
+      <button onclick="startApp()">Lancer</button>
+      <button onclick="copyLink()">📎 Copier mon lien</button>
+      <button onclick="stopSharing()">🛑 Arrêter le partage</button>
+      <div class="follower-list" id="followerList"></div>
+    </div>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -251,8 +248,30 @@
       if (follow) document.getElementById('follow').value = follow;
     }
 
-    function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('active');
+    function setupBottomSheetDrag() {
+      const sheet = document.getElementById('bottomSheet');
+      const handle = document.getElementById('dragHandle');
+      let startY = 0;
+      let currentY = 0;
+      let dragging = false;
+
+      handle.addEventListener('touchstart', e => {
+        dragging = true;
+        startY = e.touches[0].clientY;
+      });
+      handle.addEventListener('touchmove', e => {
+        if (!dragging) return;
+        currentY = e.touches[0].clientY;
+        const delta = currentY - startY;
+        if (delta > 50) {
+          sheet.classList.remove('expanded');
+        } else if (delta < -50) {
+          sheet.classList.add('expanded');
+        }
+      });
+      handle.addEventListener('touchend', () => {
+        dragging = false;
+      });
     }
 
     window.onload = () => {
@@ -270,6 +289,8 @@
           console.log("✅ Service Worker enregistré !");
         });
       }
+
+      setupBottomSheetDrag();
     }
   </script>
 </body>
