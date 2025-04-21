@@ -221,14 +221,18 @@
     }
 
     function copyLink() {
-      const me = getMe();
-      const follow = getFollow();
-      if (!me) return alert("Renseigne ton prénom d'abord !");
-      const link = `${window.location.origin}?me=${me}&follow=${follow.join(',')}`;
-      navigator.clipboard.writeText(link).then(() => {
-        alert("Lien copié dans le presse-papiers ! Envoie-le à tes proches ✉️");
-      });
-    }
+  const me = getMe();
+  const follow = getFollow();
+  if (!me) return alert("Renseigne ton prénom d'abord !");
+
+  const base = `${window.location.origin}${window.location.pathname}`;
+  const link = `${base}?me=${me}&follow=${follow.join(',')}`;
+
+  navigator.clipboard.writeText(link).then(() => {
+    alert("Lien copié dans le presse-papiers ! Envoie-le à tes proches ✉️");
+  });
+}
+
 
     function getMe() {
       return document.getElementById('me').value.trim().toLowerCase();
